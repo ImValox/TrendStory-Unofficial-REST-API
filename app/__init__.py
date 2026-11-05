@@ -1,0 +1,4 @@
+"""
+TrendStory FastAPI App.
+"""
+
