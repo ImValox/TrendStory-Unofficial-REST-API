@@ -113,8 +113,8 @@ class BufferClient:
             "input": {
                 "text": text,
                 "channelId": channel_id,
-                "schedulingType": "now" if post_now else "automatic",
-                "mode": "postNow" if post_now else "addToQueue",
+                "schedulingType": "automatic",
+                "mode": "shareNow" if post_now else "addToQueue",
                 "assets": [
                     {
                         "video": {
