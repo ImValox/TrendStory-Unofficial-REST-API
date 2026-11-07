@@ -22,6 +22,11 @@ class RefreshTokenRequest(BaseModel):
     )
 
 
+class SetSessionRequest(BaseModel):
+    access_token: str = Field(..., description="Access token JWT Supabase")
+    refresh_token: str = Field(..., description="Refresh token Supabase")
+
+
 class GenerateVideoRequest(BaseModel):
     prompt: str = Field(
         ...,

@@ -4,13 +4,41 @@ Authentication routes for TrendStory microservice.
 
 from fastapi import APIRouter, HTTPException, Depends
 from trendstory.client import TrendStoryClient, TrendStoryAuthError
-from trendstory.models import LoginRequest, RefreshTokenRequest, ApiResponse
+from trendstory.models import LoginRequest, RefreshTokenRequest, SetSessionRequest, ApiResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentification"])
 
 
 def get_client() -> TrendStoryClient:
-    return TrendStoryClient(session_file="session.json")
+    return TrendStoryClient()
+
+
+@router.post("/session", response_model=ApiResponse)
+async def set_session(
+    req: SetSessionRequest,
+    client: TrendStoryClient = Depends(get_client),
+):
+    """
+    Définit manuellement une nouvelle session Supabase (access_token + refresh_token).
+    Valide les jetons en direct avec Supabase, récupère le profil utilisateur et enregistre dans session.json.
+    """
+    try:
+        data = await client.set_session(
+            access_token=req.access_token,
+            refresh_token=req.refresh_token,
+        )
+        return ApiResponse(
+            success=True,
+            data={
+                "message": "Session mise à jour et validée avec succès",
+                "email": data.get("email"),
+                "expires_at": data.get("expires_at"),
+            },
+        )
+    except TrendStoryAuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
 
 @router.post("/login", response_model=ApiResponse)

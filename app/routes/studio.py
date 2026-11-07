@@ -14,7 +14,7 @@ router = APIRouter(prefix="/studio", tags=["Studio & Outils"])
 
 
 def get_client() -> TrendStoryClient:
-    return TrendStoryClient(session_file="session.json")
+    return TrendStoryClient()
 
 
 @router.get("/projects", response_model=ApiResponse)

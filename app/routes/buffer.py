@@ -41,7 +41,7 @@ def get_buffer_client() -> BufferClient:
 
 
 def get_trendstory_client() -> TrendStoryClient:
-    return TrendStoryClient(session_file="session.json")
+    return TrendStoryClient()
 
 
 @router.get("/channels", response_model=ApiResponse)

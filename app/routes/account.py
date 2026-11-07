@@ -10,7 +10,7 @@ router = APIRouter(prefix="/account", tags=["Compte & Crédits"])
 
 
 def get_client() -> TrendStoryClient:
-    return TrendStoryClient(session_file="session.json")
+    return TrendStoryClient()
 
 
 @router.get("/me", response_model=ApiResponse)

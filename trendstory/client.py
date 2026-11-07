@@ -46,15 +46,20 @@ def extract_jwt_exp(token: Optional[str]) -> Optional[int]:
     return None
 
 
+DEFAULT_SESSION_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "session.json"
+)
+
+
 class TrendStoryClient:
     def __init__(
         self,
-        session_file: str = "session.json",
+        session_file: Optional[str] = None,
         access_token: Optional[str] = None,
         refresh_token: Optional[str] = None,
         auto_load: bool = True,
     ):
-        self.session_file = session_file
+        self.session_file = session_file or os.getenv("SESSION_FILE") or DEFAULT_SESSION_FILE
         self.access_token = access_token
         self.refresh_token = refresh_token
         self.expires_at: Optional[int] = None
@@ -194,16 +199,51 @@ class TrendStoryClient:
             self.save_session()
             return data
 
+    async def set_session(
+        self, access_token: str, refresh_token: str
+    ) -> Dict[str, Any]:
+        """Sets new session tokens, validates them by fetching profile, and saves to file."""
+        self.access_token = access_token.strip()
+        self.refresh_token = refresh_token.strip()
+        self.expires_at = extract_jwt_exp(self.access_token)
+
+        # Validate tokens by calling get_me
+        try:
+            profile = await self.get_me()
+            self.user = profile
+            self.save_session()
+            return {
+                "email": profile.get("email"),
+                "expires_at": self.expires_at,
+                "user": profile,
+            }
+        except Exception as e:
+            # If access_token was already expired, attempt immediate refresh
+            try:
+                data = await self.refresh_session()
+                return {
+                    "email": self.user.get("email") if self.user else None,
+                    "expires_at": self.expires_at,
+                    "user": self.user,
+                }
+            except Exception as ref_err:
+                raise TrendStoryAuthError(
+                    f"Tokens invalides : {e} (Tentative de refresh échouée: {ref_err})"
+                )
+
     async def _ensure_token(self) -> str:
         """Ensures access token is present and not expired."""
+        # Always reload session from file to pick up any background refreshes
+        self.load_session()
+
         if not self.access_token and self.refresh_token:
             await self.refresh_session()
 
         if self.access_token and not self.expires_at:
             self.expires_at = extract_jwt_exp(self.access_token)
 
-        # Check expiration (with 60-second buffer)
-        is_expired = bool(self.expires_at and time.time() > (self.expires_at - 60))
+        # Check expiration (with 120-second buffer)
+        is_expired = bool(self.expires_at and time.time() > (self.expires_at - 120))
         if (is_expired or not self.access_token) and self.refresh_token:
             try:
                 await self.refresh_session()

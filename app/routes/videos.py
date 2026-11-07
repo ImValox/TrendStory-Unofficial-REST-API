@@ -10,7 +10,7 @@ router = APIRouter(prefix="/videos", tags=["Vidéos & Génération"])
 
 
 def get_client() -> TrendStoryClient:
-    return TrendStoryClient(session_file="session.json")
+    return TrendStoryClient()
 
 
 @router.get("", response_model=ApiResponse)
