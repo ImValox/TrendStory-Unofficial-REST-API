@@ -89,9 +89,10 @@ class BufferClient:
         video_url: str,
         text: str,
         post_now: bool = True,
+        is_instagram_reel: bool = False,
     ) -> Dict[str, Any]:
         """
-        Publie ou planifie une vidéo sur un canal (ex: TikTok) via son URL publique/signée.
+        Publie ou planifie une vidéo sur un canal (ex: TikTok, Instagram Reels) via son URL publique/signée.
         """
         mutation = """
         mutation CreatePost($input: CreatePostInput!) {
@@ -109,21 +110,29 @@ class BufferClient:
             }
         }
         """
-        variables = {
-            "input": {
-                "text": text,
-                "channelId": channel_id,
-                "schedulingType": "automatic",
-                "mode": "shareNow" if post_now else "addToQueue",
-                "assets": [
-                    {
-                        "video": {
-                            "url": video_url
-                        }
+        input_data = {
+            "text": text,
+            "channelId": channel_id,
+            "schedulingType": "automatic",
+            "mode": "shareNow" if post_now else "addToQueue",
+            "assets": [
+                {
+                    "video": {
+                        "url": video_url
                     }
-                ],
-            }
+                }
+            ],
         }
+
+        if is_instagram_reel:
+            input_data["metadata"] = {
+                "instagram": {
+                    "type": "reel",
+                    "shouldShareToFeed": True,
+                }
+            }
+
+        variables = {"input": input_data}
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
