@@ -13,15 +13,14 @@ DEFAULT_USER_AGENT = (
 
 # Standard video styles observed in TrendStory
 VIDEO_STYLES = [
-    "hyperrealistic",
+    "human-pixar",
+    "fruit",
+    "animals-3d",
+    "realistic",
+    "horror",
+    "claymation",
+    "object-3d",
     "anime",
-    "cinematic",
-    "comic",
-    "3d-render",
-    "cyberpunk",
-    "retro",
-    "fantasy",
-    "minimalist",
 ]
 
 # Standard models

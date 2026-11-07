@@ -295,6 +295,13 @@ class TrendStoryClient:
         """Cancels an in-progress video generation."""
         return await self.request("POST", f"/api/videos/{video_id}/cancel")
 
+    async def generate_video_clips(self, video_id: str) -> Dict[str, Any]:
+        """
+        Triggers Phase 2: turns generated scenes/images into animated clips and final video MP4.
+        Call this when the video reaches status 'preview_ready'.
+        """
+        return await self.request("POST", f"/api/videos/{video_id}/generate-videos")
+
     async def generate_video(
         self,
         prompt: str,

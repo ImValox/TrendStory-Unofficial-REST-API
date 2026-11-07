@@ -28,16 +28,16 @@ class GenerateVideoRequest(BaseModel):
         description="Sujet ou script de la vidéo à générer (ex: 'Histoire fascinante sur les abysses sous-marins')"
     )
     style: str = Field(
-        default="cinematic",
-        description="Style visuel (ex: cinematic, anime, hyperrealistic, 3d-render, etc.)"
+        default="human-pixar",
+        description="Style visuel (ex: human-pixar, fruit, animals-3d, realistic, etc.)"
     )
     video_model: Optional[str] = Field(
         default="kling-v1",
-        description="Modèle vidéo (ex: kling-v1, luma-ray, etc.)"
+        description="Modèle vidéo (ex: kling-v1, luma-ray, grok-imagine, etc.)"
     )
     video_tier: Optional[str] = Field(
-        default="standard",
-        description="Tier de rendu vidéo (ex: standard, pro)"
+        default="normal",
+        description="Tier de rendu vidéo (normal, lite)"
     )
     image_model: Optional[str] = Field(
         default="nano-banana",
@@ -48,16 +48,16 @@ class GenerateVideoRequest(BaseModel):
         description="Durée cible de la vidéo (ex: 30s, 60s, 90s)"
     )
     subtitle_style: Optional[str] = Field(
-        default="trend",
-        description="Style des sous-titres animés"
+        default="karaoke",
+        description="Style des sous-titres animés (karaoke, simple, italic)"
     )
     music_source: Optional[str] = Field(
         default="library",
         description="Source musicale (library, user, none)"
     )
     music_id: Optional[str] = Field(
-        default=None,
-        description="ID du morceau de musique choisi"
+        default="track-6",
+        description="ID du morceau de musique choisi (ex: track-6)"
     )
     locale: Optional[str] = Field(
         default="fr",

@@ -116,3 +116,18 @@ async def cancel_video(video_id: str, client: TrendStoryClient = Depends(get_cli
     except TrendStoryApiError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
+
+@router.post("/{video_id}/generate-videos", response_model=ApiResponse)
+async def generate_video_clips(video_id: str, client: TrendStoryClient = Depends(get_client)):
+    """
+    Déclenche la Phase 2 : génère les clips vidéo animés et assemble le MP4 final avec voix et sous-titres.
+    À appeler dès que la vidéo atteint le statut 'preview_ready'.
+    """
+    try:
+        res = await client.generate_video_clips(video_id)
+        return ApiResponse(success=True, data=res)
+    except TrendStoryAuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except TrendStoryApiError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+
