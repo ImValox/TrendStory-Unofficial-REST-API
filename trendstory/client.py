@@ -202,10 +202,11 @@ class TrendStoryClient:
     async def set_session(
         self, access_token: str, refresh_token: str
     ) -> Dict[str, Any]:
-        """Sets new session tokens, validates them by fetching profile, and saves to file."""
+        """Sets new session tokens, saves them to file immediately, and validates them."""
         self.access_token = access_token.strip()
         self.refresh_token = refresh_token.strip()
         self.expires_at = extract_jwt_exp(self.access_token)
+        self.save_session()
 
         # Validate tokens by calling get_me
         try:
@@ -233,8 +234,8 @@ class TrendStoryClient:
 
     async def _ensure_token(self) -> str:
         """Ensures access token is present and not expired."""
-        # Always reload session from file to pick up any background refreshes
-        self.load_session()
+        if not self.access_token:
+            self.load_session()
 
         if not self.access_token and self.refresh_token:
             await self.refresh_session()
@@ -244,7 +245,7 @@ class TrendStoryClient:
 
         # Check expiration (with 120-second buffer)
         is_expired = bool(self.expires_at and time.time() > (self.expires_at - 120))
-        if (is_expired or not self.access_token) and self.refresh_token:
+        if is_expired and self.refresh_token:
             try:
                 await self.refresh_session()
             except Exception as e:
