@@ -96,10 +96,15 @@ class BufferClient:
         mutation = """
         mutation CreatePost($input: CreatePostInput!) {
             createPost(input: $input) {
-                post {
-                    id
-                    status
-                    text
+                ... on PostActionSuccess {
+                    post {
+                        id
+                        status
+                        text
+                    }
+                }
+                ... on MutationError {
+                    message
                 }
             }
         }
@@ -140,5 +145,12 @@ class BufferClient:
                     details=data["errors"],
                 )
 
-            return data.get("data", {}).get("createPost", {})
+            create_post = data.get("data", {}).get("createPost", {})
+            if "message" in create_post and "post" not in create_post:
+                raise BufferApiError(
+                    f"Erreur Buffer ({create_post.get('__typename', 'MutationError')}): {create_post.get('message')}",
+                    details=create_post,
+                )
+
+            return create_post
 
