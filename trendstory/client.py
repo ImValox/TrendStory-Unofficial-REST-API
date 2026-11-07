@@ -44,14 +44,22 @@ class TrendStoryClient:
         self.expires_at: Optional[int] = None
         self.user: Optional[Dict[str, Any]] = None
 
+        env_access = os.getenv("TRENDSTORY_ACCESS_TOKEN")
+        env_refresh = os.getenv("TRENDSTORY_REFRESH_TOKEN")
+
         if auto_load and not self.access_token:
             self.load_session()
 
-        # Fallback to environment variables if still empty
-        if not self.access_token and os.getenv("TRENDSTORY_ACCESS_TOKEN"):
-            self.access_token = os.getenv("TRENDSTORY_ACCESS_TOKEN")
-        if not self.refresh_token and os.getenv("TRENDSTORY_REFRESH_TOKEN"):
-            self.refresh_token = os.getenv("TRENDSTORY_REFRESH_TOKEN")
+        # Si le .env contient des tokens, ils ont la priorité sur le cache session.json
+        if env_refresh and env_refresh != self.refresh_token:
+            self.refresh_token = env_refresh
+            self.access_token = env_access or None
+            self.user = None
+            self.expires_at = None
+        elif env_access and env_access != self.access_token:
+            self.access_token = env_access
+            self.user = None
+            self.expires_at = None
 
     def load_session(self) -> bool:
         """Loads saved session from local JSON file."""
