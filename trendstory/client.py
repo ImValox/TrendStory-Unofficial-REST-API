@@ -3,6 +3,7 @@ TrendStory API Client.
 Handles Supabase token management, auto-refresh, and Railway backend API endpoints.
 """
 
+import base64
 import json
 import os
 import time
@@ -30,6 +31,21 @@ class TrendStoryApiError(Exception):
         self.response_data = response_data
 
 
+def extract_jwt_exp(token: Optional[str]) -> Optional[int]:
+    """Extracts expiration timestamp (exp) from a JWT without signature verification."""
+    if not token or not isinstance(token, str):
+        return None
+    try:
+        parts = token.split(".")
+        if len(parts) >= 2:
+            padding = "=" * ((4 - len(parts[1]) % 4) % 4)
+            payload = json.loads(base64.urlsafe_b64decode(parts[1] + padding))
+            return payload.get("exp")
+    except Exception:
+        pass
+    return None
+
+
 class TrendStoryClient:
     def __init__(
         self,
@@ -47,19 +63,22 @@ class TrendStoryClient:
         env_access = os.getenv("TRENDSTORY_ACCESS_TOKEN")
         env_refresh = os.getenv("TRENDSTORY_REFRESH_TOKEN")
 
+        # Load session from session.json first
         if auto_load and not self.access_token:
             self.load_session()
 
-        # Si le .env contient des tokens, ils ont la priorité sur le cache session.json
-        if env_refresh and env_refresh != self.refresh_token:
+        # If .env has refresh_token, use it if not already present
+        if env_refresh and not self.refresh_token:
             self.refresh_token = env_refresh
-            self.access_token = env_access or None
-            self.user = None
-            self.expires_at = None
-        elif env_access and env_access != self.access_token:
+
+        # If we still have no access token, fallback to .env access token
+        if not self.access_token and env_access:
             self.access_token = env_access
-            self.user = None
-            self.expires_at = None
+            self.expires_at = extract_jwt_exp(env_access)
+
+        # Always ensure expires_at is set if access_token is present
+        if self.access_token and not self.expires_at:
+            self.expires_at = extract_jwt_exp(self.access_token)
 
     def load_session(self) -> bool:
         """Loads saved session from local JSON file."""
@@ -69,7 +88,7 @@ class TrendStoryClient:
                     data = json.load(f)
                     self.access_token = data.get("access_token")
                     self.refresh_token = data.get("refresh_token")
-                    self.expires_at = data.get("expires_at")
+                    self.expires_at = data.get("expires_at") or extract_jwt_exp(self.access_token)
                     self.user = data.get("user")
                     return True
             except Exception:
@@ -180,13 +199,16 @@ class TrendStoryClient:
         if not self.access_token and self.refresh_token:
             await self.refresh_session()
 
+        if self.access_token and not self.expires_at:
+            self.expires_at = extract_jwt_exp(self.access_token)
+
         # Check expiration (with 60-second buffer)
-        if self.expires_at and time.time() > (self.expires_at - 60):
-            if self.refresh_token:
-                try:
-                    await self.refresh_session()
-                except Exception as e:
-                    print(f"[Warning] Auto-refresh failed: {e}")
+        is_expired = bool(self.expires_at and time.time() > (self.expires_at - 60))
+        if (is_expired or not self.access_token) and self.refresh_token:
+            try:
+                await self.refresh_session()
+            except Exception as e:
+                print(f"[Warning] Auto-refresh in _ensure_token failed: {e}")
 
         if not self.access_token:
             raise TrendStoryAuthError("Client is not authenticated. Please login or provide a valid token.")
@@ -223,19 +245,21 @@ class TrendStoryClient:
                 params=params,
             )
 
-            # If 401 Unauthorized, attempt refresh once
-            if resp.status_code == 401 and retry_on_401 and self.refresh_token:
-                try:
-                    await self.refresh_session()
-                    return await self.request(
-                        method=method,
-                        path=path,
-                        json_data=json_data,
-                        params=params,
-                        retry_on_401=False,
-                    )
-                except Exception:
-                    pass
+            # If 401 Unauthorized, reload session and attempt refresh once
+            if resp.status_code == 401 and retry_on_401:
+                self.load_session()
+                if self.refresh_token:
+                    try:
+                        await self.refresh_session()
+                        return await self.request(
+                            method=method,
+                            path=path,
+                            json_data=json_data,
+                            params=params,
+                            retry_on_401=False,
+                        )
+                    except Exception as e:
+                        print(f"[Warning] Auto-refresh on 401 failed: {e}")
 
             if resp.status_code >= 400:
                 try:
